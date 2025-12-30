@@ -25,7 +25,7 @@ The application can be configured using environment variables:
 | `SERVER_HOST` | Network interface to bind to | `0.0.0.0` |
 | `SERVER_PORT` | Port to listen on | `3000` |
 | `QR_DEFAULT_COLOR` | Default color for generated QR codes (HEX) | `#000000` |
-| `RUST_LOG` | Logging level (`debug`, `info`, `warn`, `error`) | `qr_generator=debug` |
+| `RUST_LOG` | Logging level (`debug`, `info`, `warn`, `error`) | `k-qr=debug` |
 
 ## Getting Started
 
@@ -38,8 +38,8 @@ The application can be configured using environment variables:
 
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
-   cd qr-generator
+   git clone https://github.com/GKaszewski/k-qr
+   cd k-qr
    ```
 
 2. Run the backend:
