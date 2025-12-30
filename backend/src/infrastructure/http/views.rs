@@ -1,6 +1,6 @@
-use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
-use maud::{html, Markup, PreEscaped, DOCTYPE};
+use base64::engine::general_purpose::STANDARD;
+use maud::{DOCTYPE, Markup, PreEscaped, html};
 
 const LOGO_BYTES: &[u8] = include_bytes!("logo.png");
 const FAVICON_BYTES: &[u8] = include_bytes!("favicon.ico");
@@ -14,6 +14,24 @@ pub fn layout(title: &str, content: Markup) -> Markup {
                 meta charset="utf-8";
                 meta name="viewport" content="width=device-width, initial-scale=1.0";
                 title { (title) }
+
+                // SEO Meta Tags
+                meta name="description" content="Generate high-quality QR codes instantly with K-QR. A fast, secure, and easy-to-use QR code generator built with Rust.";
+                meta name="keywords" content="qr code generator, rust, k-qr, fast qr, secure qr code, htmx qr generator";
+                meta name="author" content="Gabriel Kaszewski";
+                meta name="robots" content="index, follow";
+
+                // Open Graph / Facebook
+                meta property="og:type" content="website";
+                meta property="og:title" content=(title);
+                meta property="og:description" content="A high-performance, secure QR code generator built with Rust and HTMX.";
+                meta property="og:site_name" content="K-QR";
+
+                // Twitter Card
+                meta name="twitter:card" content="summary_large_image";
+                meta name="twitter:title" content=(title);
+                meta name="twitter:description" content="Generate high-quality QR codes instantly with K-QR. Built with Rust for performance.";
+
                 link rel="icon" type="image/x-icon" href=(format!("data:image/x-icon;base64,{}", favicon));
                 link rel="preconnect" href="https://fonts.googleapis.com";
                 link rel="preconnect" href="https://fonts.gstatic.com" crossorigin;
