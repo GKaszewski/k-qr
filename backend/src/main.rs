@@ -1,92 +1,30 @@
-use std::collections::HashMap;
+use std::sync::Arc;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use axum::{
-    debug_handler,
-    extract::Query,
-    http::{header::CONTENT_TYPE, Method, StatusCode},
-    response::IntoResponse,
-    routing::get,
-    Router,
+use k_qr::application::generate_qr::GenerateQrUseCase;
+use k_qr::infrastructure::{
+    config::AppConfig, http::server::AxumServer, qr_adapter::QrCodeAdapter,
 };
-use image::{png::PngEncoder, ColorType, Luma};
-use maud::{html, Markup};
-use tower_http::cors::{Any, CorsLayer};
+use k_qr::ports::HttpServer;
 
 #[tokio::main]
-async fn main() {
-    let app = Router::new()
-        .route("/", get(index))
-        .route("/qr", get(get_qr_code))
-        .layer(
-            CorsLayer::new()
-                .allow_origin(Any)
-                .allow_methods([Method::GET]),
-        );
+async fn main() -> anyhow::Result<()> {
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::EnvFilter::new(
+            std::env::var("RUST_LOG").unwrap_or_else(|_| "k_qr=debug".into()),
+        ))
+        .with(tracing_subscriber::fmt::layer())
+        .init();
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let config = AppConfig::load()?;
+    tracing::info!("Configuration loaded: {:?}", config);
 
-    axum::serve(listener, app).await.unwrap();
-}
+    let qr_adapter = Arc::new(QrCodeAdapter);
+    let generate_use_case = Arc::new(GenerateQrUseCase::new(qr_adapter));
 
-#[debug_handler]
-async fn index() -> Markup {
-    html! {
-        html {
-            head {
-                title { "QR Code Generator" }
-            }
-            body {
-                h1 { "QR Code Generator" }
-                form action="/qr" method="get" {
-                    label for="link" { "Value: " }
-                    input type="text" name="link" id="link" required;
-                    input type="submit" value="Generate QR Code";
-                }
-            }
-        }
-    }
-}
+    let server: Box<dyn HttpServer> = Box::new(AxumServer::new(generate_use_case));
 
-async fn get_qr_code(Query(params): Query<HashMap<String, String>>) -> impl IntoResponse {
-    let link = match params.get("link") {
-        Some(l) => l,
-        None => {
-            return (
-                StatusCode::BAD_REQUEST,
-                [(CONTENT_TYPE, "text/plain")],
-                "Missing link",
-            )
-                .into_response();
-        }
-    };
+    server.run(&config.server_host, config.server_port).await?;
 
-    let qr_code = match qrcode::QrCode::new(link) {
-        Ok(qr) => qr,
-        Err(_) => {
-            return (
-                StatusCode::BAD_REQUEST,
-                [(CONTENT_TYPE, "text/plain")],
-                "Invalid link",
-            )
-                .into_response()
-        }
-    };
-
-    let qr_image = qr_code.render::<Luma<u8>>().build();
-    let mut buffer: Vec<u8> = Vec::new();
-    let width = qr_image.width();
-    let height = qr_image.height();
-    let encoder = PngEncoder::new(&mut buffer);
-    match encoder.encode(&qr_image.into_raw(), width, height, ColorType::L8) {
-        Ok(_) => (),
-        Err(_) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                [(CONTENT_TYPE, "text/plain")],
-                "Failed to encode QR code",
-            )
-                .into_response()
-        }
-    }
-    (StatusCode::OK, [(CONTENT_TYPE, "image/png")], buffer).into_response()
+    Ok(())
 }

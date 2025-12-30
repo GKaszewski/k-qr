@@ -1,9 +1,16 @@
 services:
   backend:
-    build: ./backend
-  nginx:
-    image: nginx:latest
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    image: registry.gabrielkaszewski.dev/k-qr:latest
+    container_name: k-qr
+
     ports:
-      - '8000:80'
-    volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - "${SERVER_PORT:-3000}:3000"
+    environment:
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=3000
+      - QR_DEFAULT_COLOR=${QR_DEFAULT_COLOR:-#000000}
+      - RUST_LOG=info
+    restart: unless-stopped
